@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JT808 Live Stream Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #333;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .info {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .stream-card {
+            background: #222;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        
+        .video-container {
+            background: #000;
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+        }
+        
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .stream-info {
+            padding: 20px;
+        }
+        
+        .device-id {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+        
+        .status {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .play-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .play-btn:hover {
+            background: #45a049;
+        }
+        
+        .play-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .fullscreen-btn {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .fullscreen-btn:hover {
+            background: #0b7dda;
+        }
+        
+        .error {
+            color: #f44336;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #333;
+            border-top-color: #4CAF50;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .no-streams {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #aaa;
+        }
+        
+        .no-streams p {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .refresh-btn {
+            background: #666;
+            color: white;
+            padding: 10px 20px;
+            margin-top: 20px;
+        }
+        
+        .refresh-btn:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎥 JT808 Live Stream</h1>
+            <p class="info">Dispositivos GPS conectados transmitindo vídeo ao vivo</p>
+        </header>
+
+        <div class="grid" id="streamsContainer">
+            <div class="no-streams">
+                <div class="loading show">
+                    <div class="spinner"></div>
+                    <span>Carregando streams...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/live';
+        const container = document.getElementById('streamsContainer');
+        const hlsInstances = new Map();
+
+        async function loadStreams() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                if (!data.streams || data.streams.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-streams">
+                            <p>📡 Nenhum stream ao vivo disponível</p>
+                            <p style="font-size: 13px;">Conecte um dispositivo GPS e inicie a transmissão</p>
+                            <button class="refresh-btn" onclick="loadStreams()">🔄 Atualizar</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.streams.map(stream => `
+                    <div class="stream-card">
+                        <div class="video-container">
+                            <video id="video-${stream.device_id}" playsinline controls></video>
+                            <div class="loading" id="loading-${stream.device_id}">
+                                <div class="spinner"></div>
+                                <span>Conectando...</span>
+                            </div>
+                        </div>
+                        <div class="stream-info">
+                            <div class="device-id">📱 ${stream.device_id}</div>
+                            <div class="status" id="status-${stream.device_id}">Aguardando...</div>
+                            <div class="controls">
+                                <button class="play-btn" onclick="playStream('${stream.device_id}', '${stream.hls_url}')">
+                                    ▶ Reproduzir
+                                </button>
+                                <button class="fullscreen-btn" onclick="fullscreen('video-${stream.device_id}')">
+                                    ⛶ Tela Cheia
+                                </button>
+                            </div>
+                            <div class="error" id="error-${stream.device_id}"></div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="no-streams">
+                        <p>❌ Erro ao carregar streams</p>
+                        <p style="font-size: 13px;">${error.message}</p>
+                        <button class="refresh-btn" onclick="loadStreams()">🔄 Tentar Novamente</button>
+                    </div>
+                `;
+            }
+        }
+
+        function playStream(deviceId, hlsUrl) {
+            const video = document.getElementById(`video-${deviceId}`);
+            const loading = document.getElementById(`loading-${deviceId}`);
+            const error = document.getElementById(`error-${deviceId}`);
+            const status = document.getElementById(`status-${deviceId}`);
+
+            error.classList.remove('show');
+            error.textContent = '';
+            loading.classList.add('show');
+            status.textContent = 'Conectando...';
+
+            // Cleanup previous instance for this video before creating a new one
+            const existingHls = hlsInstances.get(deviceId);
+            if (existingHls) {
+                existingHls.destroy();
+                hlsInstances.delete(deviceId);
+            }
+
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    debug: false,
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                hlsInstances.set(deviceId, hls);
+
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    loading.classList.remove('show');
+                    status.textContent = '🟢 Ao vivo';
+                    video.play().catch(e => {
+                        error.classList.add('show');
+                        error.textContent = 'Erro ao reproduzir: ' + e.message;
+                        loading.classList.remove('show');
+                    });
+                });
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                            status.textContent = '⚠ Recuperando...';
+                            hls.recoverMediaError();
+                            return;
+                        }
+
+                        hls.destroy();
+                        hlsInstances.delete(deviceId);
+                        error.classList.add('show');
+                        error.textContent = 'Erro HLS: ' + data.type;
+                        loading.classList.remove('show');
+                        status.textContent = '❌ Erro';
+                    }
+                });
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Safari native HLS support
+                video.src = hlsUrl;
+                video.addEventListener('loadstart', () => {
+                    loading.classList.add('show');
+                });
+                video.addEventListener('canplay', () => {
+                    loading.classList.remove('show');
+                    status.textContent = '🟢 Ao vivo';
+                });
+                video.addEventListener('error', (e) => {
+                    error.classList.add('show');
+                    error.textContent = 'Erro ao reproduzir';
+                    loading.classList.remove('show');
+                    status.textContent = '❌ Erro';
+                });
+                video.play();
+            } else {
+                error.classList.add('show');
+                error.textContent = 'Seu navegador não suporta HLS';
+                loading.classList.remove('show');
+            }
+        }
+
+        function fullscreen(videoId) {
+            const video = document.getElementById(videoId);
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) {
+                video.webkitRequestFullscreen();
+            }
+        }
+
+        // Load streams on page load and refresh every 5 seconds
+        loadStreams();
+        setInterval(loadStreams, 5000);
+    </script>
+</body>
+</html>

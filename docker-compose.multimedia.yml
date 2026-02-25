@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # --- Serviço 1: MediaMTX (Servidor de Streaming) ---
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx
+    restart: always
+    ports:
+      - "8554:8554"       # RTSP
+      - "1935:1935"       # RTMP
+      - "8888:8888"       # HLS
+      - "8889:8889"       # WebRTC
+      - "9997:9997"       # Server list
+    environment:
+      - MTX_PROTOCOLS=tcp
+      - MTX_WEBRTCADDITIONALHOSTS=201.6.109.131
+    networks:
+      - iot_network
+    volumes:
+    - ./mediamtx.yml:/mediamtx.yml
+
+networks:
+  iot_network:
+    driver: bridge

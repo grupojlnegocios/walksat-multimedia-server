@@ -1,0 +1,52 @@
+# MediaMTX Configuration - Simplificado
+
+###############################################
+# Configurações Gerais
+
+logLevel: info
+logDestinations: [stdout]
+
+###############################################
+# Servidor RTSP (ESSENCIAL PARA CÂMERAS)
+
+rtsp: yes
+rtspAddress: :8554
+protocols: [tcp]
+
+###############################################
+# Servidor RTMP (recebe stream das câmeras)
+
+rtmp: yes
+rtmpAddress: :1935
+
+###############################################
+# Servidor HLS (fornece stream para o frontend)
+
+hls: yes
+hlsAddress: :8888
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+hlsAllowOrigin: '*'
+hlsAlwaysRemux: yes
+
+###############################################
+# WebRTC (opcional - baixa latência)
+
+webrtc: yes
+webrtcAddress: :8889
+webrtcAllowOrigin: '*'
+
+###############################################
+# API de Controle
+
+api: yes
+apiAddress: :9997
+
+###############################################
+# Paths - aceita qualquer stream
+
+paths:
+  all:
