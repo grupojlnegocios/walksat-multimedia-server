@@ -560,7 +560,7 @@ func (api *API) cameraCapture(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[HTTP_API] Building live stream request (0x9101) for device %s\n", deviceID)
 
 		// Use public IP for internet-accessible streaming
-		publicIP := "201.6.109.131" // Public IP for devices to connect via internet
+		publicIP := "34.207.109.95" // Public IP for devices to connect via internet
 		mediaPort := api.router.MediaPort
 
 		log.Printf("[HTTP_API] Media server (public): %s:%d\n", publicIP, mediaPort)
