@@ -1,0 +1,38 @@
+[Unit]
+Description=JT-Broker Media Listener - Video Streaming Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/jt-broker/bin/server
+Restart=always
+RestartSec=10
+User=jt-broker
+Group=jt-broker
+
+# Environment variables
+Environment="PORT=8189"
+Environment="LOG_LEVEL=info"
+
+# Working directory
+WorkingDirectory=/opt/jt-broker
+
+# Security and resource limits
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/jt-broker/logs /opt/jt-broker/streams
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jt-broker
+
+# Restart policy
+StartLimitInterval=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target
